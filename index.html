@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>게더링카페 손익분기 시뮬레이터</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  background: #FAF8F6; color: #3D3530;
+  min-height: 100vh; padding: 20px 16px 40px;
+}
+.container { max-width: 480px; margin: 0 auto; }
+
+/* 헤더 */
+.header { text-align: center; margin-bottom: 24px; }
+.header h1 { font-size: 20px; font-weight: 700; color: #3D3530; margin-bottom: 5px; }
+.header p { font-size: 13px; color: #9C8B82; }
+
+/* 카드 */
+.card { background: #fff; border-radius: 16px; border: 1px solid #EAE6E2; padding: 18px 16px; margin-bottom: 12px; }
+.card-title { font-size: 11px; font-weight: 700; color: #9C8B82; margin-bottom: 14px; letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* 고정비 그리드 */
+.fixed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.fi { background: #FAF8F6; border-radius: 10px; padding: 10px 11px; border: 1px solid #EAE6E2; display: flex; flex-direction: column; gap: 3px; }
+.fi-label { font-size: 11px; color: #9C8B82; }
+.fi-val { font-size: 14px; font-weight: 700; color: #3D3530; }
+.fixed-total { text-align: right; margin-top: 10px; font-size: 13px; color: #A32D2D; font-weight: 700; }
+
+/* 슬라이더 — 모바일 최적화 핵심 */
+.sl-group { margin-bottom: 20px; }
+.sl-group:last-child { margin-bottom: 0; }
+.sl-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.sl-label { font-size: 14px; color: #3D3530; font-weight: 500; }
+.sl-val { font-size: 18px; font-weight: 700; color: #5D9278; min-width: 60px; text-align: right; }
+input[type=range] {
+  width: 100%; height: 6px; -webkit-appearance: none; appearance: none;
+  border-radius: 3px; background: #E8E4DF; outline: none; cursor: pointer;
+  touch-action: pan-y;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #9DC4B0; cursor: pointer;
+  border: 3px solid #fff; box-shadow: 0 2px 8px rgba(93,146,120,0.35);
+}
+input[type=range]::-moz-range-thumb {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #9DC4B0; cursor: pointer;
+  border: 3px solid #fff; box-shadow: 0 2px 8px rgba(93,146,120,0.35);
+}
+.sl-range-label { display: flex; justify-content: space-between; margin-top: 4px; }
+.sl-range-label span { font-size: 11px; color: #C5BAB4; }
+
+/* BEP 박스 */
+.bep-box { background: #E1F5EE; border-radius: 16px; padding: 18px; border: 1px solid #9FE1CB; margin-bottom: 12px; }
+.bep-label { font-size: 12px; color: #085041; margin-bottom: 4px; }
+.bep-val { font-size: 32px; font-weight: 700; color: #085041; line-height: 1.1; }
+.bep-sub { font-size: 12px; color: #0F6E56; margin-top: 8px; line-height: 1.65; }
+
+/* 결과 그리드 — 모바일에서 2열 */
+.results { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rb { background: #FAF8F6; border-radius: 12px; padding: 12px 10px; text-align: center; border: 1px solid #EAE6E2; }
+.rb-label { font-size: 11px; color: #9C8B82; margin-bottom: 4px; }
+.rb-val { font-size: 16px; font-weight: 700; }
+
+/* 판정 */
+.verdict { border-radius: 14px; padding: 14px 16px; font-size: 13px; line-height: 1.7; margin-bottom: 12px; border: 1px solid; }
+.verdict.profit  { background: #E1F5EE; color: #085041; border-color: #9FE1CB; }
+.verdict.even    { background: #E6F1FB; color: #0C447C; border-color: #85B7EB; }
+.verdict.loss    { background: #FCEBEB; color: #791F1F; border-color: #F09595; }
+.badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 20px; margin-left: 4px; }
+.badge.green { background: #C8EDE0; color: #085041; }
+.badge.red   { background: #FAD0D0; color: #791F1F; }
+.badge.blue  { background: #D0E5F7; color: #0C447C; }
+
+/* 팁 박스 */
+.tip { background: #FAEEDA; border-radius: 14px; padding: 14px 16px; font-size: 13px; color: #633806; line-height: 1.7; border: 1px solid #FAC775; margin-bottom: 12px; }
+.tip strong { display: block; margin-bottom: 4px; font-size: 13px; }
+
+.footer { text-align: center; font-size: 11px; color: #C5BAB4; padding-top: 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>게더링카페 손익분기 시뮬레이터</h1>
+    <p>슬라이더를 움직여 수익 구조를 직접 확인하세요</p>
+  </div>
+
+  <!-- 고정비 -->
+  <div class="card">
+    <div class="card-title">월 고정 지출</div>
+    <div class="fixed-grid">
+      <div class="fi"><span class="fi-label">월세</span><span class="fi-val">300만원</span></div>
+      <div class="fi"><span class="fi-label">전기·수도·가스</span><span class="fi-val">35만원</span></div>
+      <div class="fi"><span class="fi-label">인터넷·OTT</span><span class="fi-val">5만원</span></div>
+      <div class="fi"><span class="fi-label">마케팅·기타</span><span class="fi-val">10만원</span></div>
+    </div>
+    <div class="fixed-total">합계 350만원</div>
+  </div>
+
+  <!-- 슬라이더 -->
+  <div class="card">
+    <div class="card-title">변수 조절</div>
+
+    <div class="sl-group">
+      <div class="sl-header">
+        <span class="sl-label">모임 인원</span>
+        <span class="sl-val" id="v-members">8명</span>
+      </div>
+      <input type="range" min="3" max="10" step="1" value="8" id="members" oninput="calc()">
+      <div class="sl-range-label"><span>최소 3명</span><span>최대 10명</span></div>
+    </div>
+
+    <div class="sl-group">
+      <div class="sl-header">
+        <span class="sl-label">1인 회비</span>
+        <span class="sl-val" id="v-fee">4만원</span>
+      </div>
+      <input type="range" min="2" max="7" step="0.5" value="4" id="fee" oninput="calc()">
+      <div class="sl-range-label"><span>2만원</span><span>7만원</span></div>
+    </div>
+
+    <div class="sl-group">
+      <div class="sl-header">
+        <span class="sl-label">월 모임 횟수</span>
+        <span class="sl-val" id="v-sessions">12회</span>
+      </div>
+      <input type="range" min="4" max="26" step="1" value="12" id="sessions" oninput="calc()">
+      <div class="sl-range-label"><span>4회</span><span>26회</span></div>
+    </div>
+
+    <div class="sl-group">
+      <div class="sl-header">
+        <span class="sl-label">낮 시간 대관 수입</span>
+        <span class="sl-val" id="v-dayrent">80만원</span>
+      </div>
+      <input type="range" min="0" max="150" step="10" value="80" id="dayrent" oninput="calc()">
+      <div class="sl-range-label"><span>0원</span><span>150만원</span></div>
+    </div>
+  </div>
+
+  <!-- BEP -->
+  <div class="bep-box">
+    <div class="bep-label">손익분기 — 필요 모임 횟수 (월)</div>
+    <div class="bep-val" id="bep-val">—</div>
+    <div class="bep-sub" id="bep-sub">—</div>
+  </div>
+
+  <!-- 수익 상세 -->
+  <div class="card">
+    <div class="card-title">수익 상세</div>
+    <div class="results">
+      <div class="rb"><div class="rb-label">회당 총수입</div><div class="rb-val" id="r-rev">—</div></div>
+      <div class="rb"><div class="rb-label">회당 변동비</div><div class="rb-val" id="r-var">—</div></div>
+      <div class="rb"><div class="rb-label">회당 순수입</div><div class="rb-val" id="r-net">—</div></div>
+      <div class="rb"><div class="rb-label">월 모임 수입</div><div class="rb-val" id="r-mrev">—</div></div>
+      <div class="rb"><div class="rb-label">낮 대관 수입</div><div class="rb-val" id="r-day">—</div></div>
+      <div class="rb"><div class="rb-label">월 순이익</div><div class="rb-val" id="r-profit">—</div></div>
+    </div>
+  </div>
+
+  <!-- 판정 -->
+  <div class="verdict" id="verdict">—</div>
+
+  <!-- 팁 -->
+  <div class="tip">
+    <strong>운영 팁</strong>
+    변동비는 인당 음료 5,000원 기준이에요 (10명 만석 시 5만원).<br>
+    인원 6명 이하·회비 3만원 이하로 낮추면 BEP가 급격히 올라가요.<br>
+    낮 시간 대관을 병행하면 고정비 부담을 크게 줄일 수 있어요.
+  </div>
+
+  <div class="footer">게더링카페 사업계획 · 시뮬레이터 v2.0</div>
+</div>
+
+<script>
+function fmt(n) {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  if (abs >= 10000) return sign + Math.round(abs / 10000) + '만원';
+  if (abs >= 1000)  return sign + Math.round(abs / 1000) + '천원';
+  return sign + abs + '원';
+}
+
+function calc() {
+  const m = parseInt(document.getElementById('members').value);
+  const f = parseFloat(document.getElementById('fee').value);
+  const s = parseInt(document.getElementById('sessions').value);
+  const d = parseInt(document.getElementById('dayrent').value) * 10000;
+
+  document.getElementById('v-members').textContent = m + '명';
+  document.getElementById('v-fee').textContent = f + '만원';
+  document.getElementById('v-sessions').textContent = s + '회';
+  document.getElementById('v-dayrent').textContent = Math.round(d / 10000) + '만원';
+
+  const FIXED = 3500000;
+  const varCost  = m * 5000;
+  const perRev   = Math.round(m * f * 10000);
+  const perNet   = perRev - varCost;
+  const mRev     = s * perRev;
+  const mProfit  = s * perNet + d - FIXED;
+  const bepRaw   = perNet > 0 ? Math.ceil(Math.max(0, FIXED - d) / perNet) : 999;
+
+  // 결과 채우기
+  document.getElementById('r-rev').textContent   = fmt(perRev);
+  document.getElementById('r-var').textContent   = fmt(varCost);
+  document.getElementById('r-net').textContent   = fmt(perNet);
+  document.getElementById('r-net').style.color   = perNet >= 0 ? '#0F6E56' : '#A32D2D';
+  document.getElementById('r-mrev').textContent  = fmt(mRev);
+  document.getElementById('r-day').textContent   = fmt(d);
+  document.getElementById('r-profit').textContent = fmt(mProfit);
+  document.getElementById('r-profit').style.color = mProfit > 0 ? '#0F6E56' : mProfit < 0 ? '#A32D2D' : '#854F0B';
+
+  // BEP
+  const bepEl  = document.getElementById('bep-val');
+  const subEl  = document.getElementById('bep-sub');
+  if (bepRaw >= 999) {
+    bepEl.textContent = '계산 불가';
+    subEl.textContent = '회당 순수입이 너무 낮아요. 회비나 인원을 높여보세요.';
+  } else {
+    bepEl.textContent = bepRaw + '회';
+    const diff = s - bepRaw;
+    subEl.innerHTML = '낮 대관 수입 포함 기준 · 현재 월 ' + s + '회 운영<br>'
+      + (diff >= 0
+        ? '✓ 손익분기 달성! ' + diff + '회 여유'
+        : '✗ ' + Math.abs(diff) + '회 부족 — 횟수나 인원을 늘려보세요');
+    subEl.style.color = diff >= 0 ? '#0F6E56' : '#A32D2D';
+  }
+
+  // 판정
+  const vbox = document.getElementById('verdict');
+  if (mProfit > 100000) {
+    vbox.className = 'verdict profit';
+    vbox.innerHTML = '흑자 구조예요! <span class="badge green">월 ' + fmt(mProfit) + ' 순이익</span><br>안정적인 수익을 기대할 수 있어요.';
+  } else if (mProfit >= -100000) {
+    vbox.className = 'verdict even';
+    vbox.innerHTML = '거의 본전이에요. <span class="badge blue">손익분기 수준</span><br>인원이나 횟수를 조금 더 늘리면 흑자로 전환돼요.';
+  } else {
+    vbox.className = 'verdict loss';
+    vbox.innerHTML = '현재 설정은 적자예요. <span class="badge red">월 ' + fmt(Math.abs(mProfit)) + ' 손실</span><br>인원·회비·횟수·대관 수입 조합을 조절해보세요.';
+  }
+}
+
+calc();
+</script>
+</body>
+</html>
